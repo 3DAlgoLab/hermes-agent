@@ -651,6 +651,7 @@ def cmd_chat(args):
         "checkpoints": getattr(args, "checkpoints", False),
         "pass_session_id": getattr(args, "pass_session_id", False),
         "max_turns": getattr(args, "max_turns", None),
+        "user_id": getattr(args, "user_id", None),
     }
     # Filter out None values
     kwargs = {k: v for k, v in kwargs.items() if v is not None}
@@ -4368,6 +4369,11 @@ For more help on a command:
         "--source",
         default=None,
         help="Session source tag for filtering (default: cli). Use 'tool' for third-party integrations that should not appear in user session lists."
+    )
+    chat_parser.add_argument(
+        "--user-id",
+        default=None,
+        help="User ID for cross-platform session linking (e.g., 'jaeyoon', 'user_123'). When set, conversation history is shared across CLI, Telegram, and other platforms."
     )
     chat_parser.set_defaults(func=cmd_chat)
 

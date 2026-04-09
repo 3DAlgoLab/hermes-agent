@@ -1446,6 +1446,13 @@ class HermesCLI:
         else:
             self.max_turns = 90
         
+        # User ID for cross-platform session linking: CLI arg > env var > config
+        self.user_id = (
+            user_id
+            or os.getenv("HERMES_USER_ID")
+            or CLI_CONFIG.get("user_id")
+        )
+        
         # Parse and validate toolsets
         self.enabled_toolsets = toolsets
         if toolsets and "all" not in toolsets and "*" not in toolsets:
