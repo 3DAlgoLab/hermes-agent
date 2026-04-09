@@ -805,7 +805,70 @@ class SessionStore:
                 except Exception as e:
                     logger.warning("[Session] Failed to seed thread session: %s", e)
 
+        # Seed new sessions with history from linked platforms (CLI, Telegram, etc.)
+        if was_auto_reset is False and entry.created_at == entry.updated_at:
+            self._seed_cross_platform_session(entry, source)
+        
         return entry
+    
+    def _seed_cross_platform_session(self, entry: "SessionEntry", source: "SessionSource") -> None:
+        """
+        Seed a new session with conversation history from linked platforms.
+        This enables context sharing across CLI, Telegram, and other platforms.
+        """
+        try:
+            # Get all sessions for the same user across different platforms
+            user_sessions = self._find_user_sessions(source.user_id)
+            
+            if not user_sessions:
+                return
+            
+            # Find the most recent session with actual conversation
+            best_session = None
+            max_messages = 0
+            
+            for session_id, message_count in user_sessions:
+                if session_id != entry.session_id and message_count > max_messages:
+                    best_session = session_id
+                    max_messages = message_count
+            
+            if best_session and max_messages > 0:
+                # Load history from the best session
+                history = self.load_transcript(best_session)
+                if history:
+                    self.rewrite_transcript(entry.session_id, history)
+                    logger.info(
+                        "[Session] Seeded cross-platform session %s with %d messages from %s",
+                        entry.session_id, len(history), best_session,
+                    )
+        except Exception as e:
+            logger.warning("[Session] Failed to seed cross-platform session: %s", e)
+    
+    def _find_user_sessions(self, user_id: Optional[str]) -> List[tuple]:
+        """
+        Find all sessions for a user across platforms.
+        Returns list of (session_id, message_count) tuples.
+        """
+        if not user_id:
+            return []
+        
+        try:
+            # Query the database for sessions with this user_id
+            cursor = self._db.conn.execute(
+                """
+                SELECT s.session_id, COUNT(m.id) as msg_count
+                FROM sessions s
+                LEFT JOIN messages m ON s.session_id = m.session_id
+                WHERE s.user_id = ?
+                GROUP BY s.session_id
+                ORDER BY s.started_at DESC
+                """,
+                (user_id,)
+            )
+            return [(row[0], row[1]) for row in cursor.fetchall()]
+        except Exception as e:
+            logger.debug("[Session] Failed to query user sessions: %s", e)
+            return []
 
     def update_session(
         self,

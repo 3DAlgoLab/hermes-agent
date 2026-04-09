@@ -1325,6 +1325,7 @@ class HermesCLI:
         resume: str = None,
         checkpoints: bool = False,
         pass_session_id: bool = False,
+        user_id: str = None,
     ):
         """
         Initialize the Hermes CLI.
@@ -1332,14 +1333,16 @@ class HermesCLI:
         Args:
             model: Model to use (default: from env or claude-sonnet)
             toolsets: List of toolsets to enable (default: all)
-            provider: Inference provider ("auto", "openrouter", "nous", "openai-codex", "zai", "kimi-coding", "minimax", "minimax-cn")
+            provider: Inference provider (auto, openrouter, nous, openai-codex, zai, kimi-coding, minimax, minimax-cn)
             api_key: API key (default: from environment)
             base_url: API base URL (default: OpenRouter)
             max_turns: Maximum tool-calling iterations shared with subagents (default: 90)
             verbose: Enable verbose logging
             compact: Use compact display mode
             resume: Session ID to resume (restores conversation history from SQLite)
+            checkpoints: Enable checkpointing
             pass_session_id: Include the session ID in the agent's system prompt
+            user_id: User identifier for cross-platform session linking (default: None)
         """
         # Initialize Rich console
         self.console = Console()
@@ -1461,6 +1464,7 @@ class HermesCLI:
         self.checkpoints_enabled = checkpoints or cp_cfg.get("enabled", False)
         self.checkpoint_max_snapshots = cp_cfg.get("max_snapshots", 50)
         self.pass_session_id = pass_session_id
+        self.user_id = user_id
         
         # Ephemeral system prompt: env var takes precedence, then config
         self.system_prompt = (
@@ -2456,6 +2460,7 @@ class HermesCLI:
                 provider_data_collection=self._provider_data_collection,
                 session_id=self.session_id,
                 platform="cli",
+                user_id=self.user_id,
                 session_db=self._session_db,
                 clarify_callback=self._clarify_callback,
                 reasoning_callback=self._current_reasoning_callback(),
